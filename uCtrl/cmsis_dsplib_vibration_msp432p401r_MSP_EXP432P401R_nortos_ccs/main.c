@@ -99,7 +99,7 @@ bool sendUpperByte;
 uint16_t transmit_data;
 static volatile bool transmit;
 int bin_size = 64;
-int digital_gain = 80;
+int digital_gain = 10;
 int ENERGYBIN_SIZE = 2;
 const int SAMPLING_RATE = 100000;
 static char serial_data[UINT8_MAX];
@@ -291,22 +291,24 @@ void ADC14_IRQHandler(void)
             if ((resulth > 50) & (resulth > resultl))
             {
                 receive_data = (receive_data | (1 << bit_counter));
-
+                MAP_UART_transmitData(EUSCI_A0_BASE, '1');
                 bit_counter = bit_counter + 1;
             }
 
             if ((resultl > 50) & (resultl > resulth))
             {
                 bit_counter = bit_counter + 1;
+                MAP_UART_transmitData(EUSCI_A0_BASE, '0');
             }
 
             if (bit_counter == 8)
             {
                 bit_counter = 0;
-                MAP_UART_transmitData(EUSCI_A0_BASE, receive_data);
+                //MAP_UART_transmitData(EUSCI_A0_BASE, receive_data);
                 receive_data = 0;
             }
             time = smclk - counter;
+            memset(ADCresultsBuffer, 0, sizeof(ADCresultsBuffer));
         }
 
         ADCresultsBuffer[resPos++] = MAP_ADC14_getResult(ADC_MEM0)
@@ -369,18 +371,25 @@ void EUSCIA0_IRQHandler(void)
                     targetFrequency2 = atoi(message);
                     indexh = floor(512 * (targetFrequency2) / SAMPLING_RATE);
 
+                    break;
                 }
                 case '4':
                 {
                     bin_size = atoi(message);
+
+                    break;
                 }
                 case '5':
                 {
                     ENERGYBIN_SIZE = atoi(message);
+
+                    break;
                 }
                 case '6':
                 {
                     digital_gain = atoi(message);
+
+                    break;
                 }
 
                 default:
@@ -405,6 +414,7 @@ void EUSCIA0_IRQHandler(void)
             }
             default:
                 MAP_Interrupt_enableInterrupt(INT_ADC14);
+                break;
             }
 
             MAP_UART_transmitData(EUSCI_A0_BASE, '0');
